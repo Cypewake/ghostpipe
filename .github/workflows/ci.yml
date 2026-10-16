@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+      - name: 静态检查
+        run: go vet ./...
+      - name: 构建
+        run: go build -o bin/ ./cmd/...
+      - name: 单元测试
+        run: go test ./... -v -timeout 300s
+      - name: 端到端回归
+        run: bash verify-all.sh
+
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+      - name: 静态检查
+        run: go vet ./...
+      - name: 构建
+        run: go build -o bin/ ./cmd/...
+      - name: 单元测试
+        run: go test ./... -v -timeout 300s
