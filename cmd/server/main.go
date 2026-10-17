@@ -26,6 +26,7 @@ func main() {
 	insecure := flag.Bool("insecure-tls", false, "关闭 TLS（明文模式，仅限本地实验！）")
 	mode := flag.String("mode", "mux", "数据通道模式：mux（M2 多路复用）| conn（M1 独立数据连接）")
 	ws := flag.Bool("ws", false, "启用 WebSocket 载体（M3，路径 /ghostpipe）")
+	socks5 := flag.String("socks5", "", "服务端 SOCKS5 入口（可选，mux 模式，如 0.0.0.0:1080；动态目标由客户端内网拨号——外部经此访问客户端内网任意设备）")
 	flag.Parse()
 
 	psk, err := parsePSK(*pskHex)
@@ -40,11 +41,12 @@ func main() {
 	}
 
 	cfg := server.Config{
-		Listen: *listen,
-		PSK:    psk,
-		UseTLS: !*insecure,
-		WS:     *ws,
-		Mode:   *mode,
+		Listen:     *listen,
+		PSK:        psk,
+		UseTLS:     !*insecure,
+		WS:         *ws,
+		Mode:       *mode,
+		Socks5Addr: *socks5,
 	}
 	log.Printf("[server] ghostpipe 服务端启动 | 授权声明：仅限授权测试与自用远程访问")
 	if err := server.Run(cfg); err != nil {

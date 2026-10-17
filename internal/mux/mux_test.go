@@ -20,6 +20,11 @@ type fixture struct {
 }
 
 func newFixture(t *testing.T, serverOpenAddr func(*Stream, string)) *fixture {
+	return newFixture2(t, nil, serverOpenAddr)
+}
+
+// newFixture2 clientOpenAddr：客户端收到 OPEN_ADDR（服务端 SOCKS5 场景，客户端内网拨号）的回调
+func newFixture2(t *testing.T, clientOpenAddr, serverOpenAddr func(*Stream, string)) *fixture {
 	t.Helper()
 	a, b := net.Pipe()
 	ca := transport.NewConn(a, protocol.ProtocolVersion)
@@ -31,7 +36,7 @@ func newFixture(t *testing.T, serverOpenAddr func(*Stream, string)) *fixture {
 	// 客户端：对 OPEN（服务端发起的隧道流）做回显；服务端：对 OPEN_ADDR 回显
 	mCli.SetHandlers(func(s *Stream, _ uint16) {
 		go echo(s)
-	}, nil, nil)
+	}, clientOpenAddr, nil)
 	if serverOpenAddr == nil {
 		serverOpenAddr = func(s *Stream, _ string) {
 			go echo(s)
@@ -77,6 +82,36 @@ func TestBasicEcho(t *testing.T) {
 	}
 	if !bytes.Equal(buf, msg) {
 		t.Fatal("回显不一致")
+	}
+	_ = st.Close()
+}
+
+// TestServerInitiatedAddrStream 服务端发起 OPEN_ADDR（服务端 SOCKS5 入口场景）
+// → 客户端 onOpenAddr 内网拨号 → 双向数据可用。frp socks5 插件等价方向的单测验收。
+func TestServerInitiatedAddrStream(t *testing.T) {
+	fx := newFixture2(t, func(s *Stream, target string) {
+		if target != "192.168.7.10:80" {
+			t.Errorf("目标透传错误: %q", target)
+		}
+		go echo(s)
+	}, nil)
+	st, err := fx.server.OpenAddr("192.168.7.10:80")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.ID()%2 != 0 {
+		t.Fatalf("服务端发起的流应为偶数 ID: %d", st.ID())
+	}
+	msg := []byte("GET / HTTP/1.1")
+	if _, err := st.Write(msg); err != nil {
+		t.Fatal(err)
+	}
+	buf := make([]byte, len(msg))
+	if _, err := io.ReadFull(st, buf); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(buf, msg) {
+		t.Fatal("服务端发起流回显不一致")
 	}
 	_ = st.Close()
 }

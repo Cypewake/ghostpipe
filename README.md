@@ -40,7 +40,7 @@ ghostpipe 是一个 frp 同类的内网穿透工具，核心差异：**传输协
 | M1 | `conn` | 每个转发会话一条独立数据连接（DATA_BIND 令牌绑定） |
 | M2 | `mux` | 单连接多路复用 + 双层信用流控（默认模式） |
 | M3 | `-ws` | WebSocket 载体（零依赖手写 RFC 6455 子集），可过 nginx 反代部署形态 |
-| M4 | `-socks5` | 客户端本地 SOCKS5 入口，经隧道动态目标出网 |
+| M4 | `-socks5` | SOCKS5 动态代理，**双向**：客户端本地入口（经隧道由服务端出网）/ 服务端入口（经隧道由**客户端内网**拨号，= frp socks5 插件等价能力） |
 
 ## 2. 快速开始
 
@@ -74,14 +74,21 @@ ssh -p 10022 user@vps.example.com
 curl http://vps.example.com:10080
 ```
 
-### SOCKS5 动态出口（mux 模式）
+### SOCKS5 动态代理（mux 模式，双向）
 
 ```bash
+# 方向一：客户端本地入口 —— 内网机器借道 VPS 出网（frp 没有的反向能力）
 ./ghostpipe-client -server vps:9000 -psk <hex> -fingerprint <fp> \
     -mode mux -socks5 127.0.0.1:1080
+curl --socks5-hostname 127.0.0.1:1080 http://example.com/   # 从 VPS 侧出网
 
-curl --socks5-hostname 127.0.0.1:1080 http://internal-host:8080/
+# 方向二：服务端入口 —— 外部经代理访问客户端所在内网任意设备（frp socks5 插件等价）
+./ghostpipe-server -listen 0.0.0.0:9000 -psk <hex> -socks5 0.0.0.0:1080
+# 客户端正常连接后（无需任何额外配置）：
+curl --socks5-hostname vps:1080 http://192.168.1.20:8080/   # 访问客户端内网设备
 ```
+
+方向二即"代理工具访问内网"用法：把 VPS 的 `1080` 配进浏览器/proxychains，流量穿透隧道后由**客户端在其内网发起连接**——内网任何可达的 `IP:端口` 都能访问，等价于 frp 的 socks5 插件。
 
 ### WebSocket 载体（过 nginx 反代）
 
@@ -115,7 +122,7 @@ Payload ≤ 16KB；Length 先校验后分配（防恶意预分配耗尽内存）
 | 0x04 | DATA_BIND | C→S | M1 数据连接令牌绑定 |
 | 0x10-0x12 | REGISTER/OK/UNREGISTER | C→S/S→C/C→S | 隧道注册 / 注销（同端口原子替换） |
 | 0x20 | OPEN | S→C | 请求客户端建立转发流（M1 带 port+token；M2 带 port） |
-| 0x22 | OPEN_ADDR | C→S | SOCKS5 动态目标开流 |
+| 0x22 | OPEN_ADDR | 双向 | SOCKS5 动态目标开流：发起方=代理入口侧，接收方在己侧拨号出网 |
 | 0x30 | DATA | 双向 | 透传字节 |
 | 0x31 | CREDIT | 双向 | 流量信用窗口补充 |
 | 0x40 | CLOSE | 双向 | 关闭流 |
@@ -140,7 +147,7 @@ Payload ≤ 16KB；Length 先校验后分配（防恶意预分配耗尽内存）
 | ATT&CK 技术 | 对应实现 |
 |---|---|
 | T1572 协议隧道 | 自定义帧协议全双工隧道 |
-| T1090 代理 | SOCKS5 动态出口 |
+| T1090 代理 | SOCKS5 动态代理（双向：服务端入口访问内网 / 客户端入口借道出网） |
 | T1095 非应用层协议 | 自定义二进制协议（非 HTTP 语义） |
 | T1071.001 Web 协议 | M3 WebSocket 载体形态 |
 

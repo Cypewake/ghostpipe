@@ -217,7 +217,7 @@ func (cl *Client) runOnce() error {
 		sess.mux = m
 		m.SetHandlers(
 			func(st *mux.Stream, port uint16) { cl.handleOpenTunnel(sess, st, port) },
-			nil, // 客户端不接收 OPEN_ADDR（SOCKS5 由客户端发起）
+			func(st *mux.Stream, target string) { cl.handleOpenAddr(st, target) }, // 服务端 SOCKS5 下发：客户端内网拨号
 			func(f *protocol.Frame) {
 				if f.Type == protocol.TypeREGISTEROK {
 					if p, err := protocol.DecodeU16(f.Payload); err == nil {
@@ -347,6 +347,29 @@ func (cl *Client) handleOpenM1(port uint16, token [32]byte) {
 
 // ---- M4：SOCKS5 动态出口 ----
 
+// handleOpenAddr 服务端 SOCKS5 入口下发的动态目标 → 客户端内网拨号（frp socks5 插件等价方向）。
+// 服务端把外部用户 CONNECT 的 target 经 OPEN_ADDR(S→C) 送到这里，由客户端在所在内网出网。
+func (cl *Client) handleOpenAddr(st *mux.Stream, target string) {
+	fail := func() {
+		cl.mu.Lock()
+		sess := cl.cur
+		cl.mu.Unlock()
+		if sess != nil {
+			_ = sess.conn.Send(protocol.TypeERROR, st.ID(),
+				protocol.EncodeError(protocol.ErrCodeRemoteRefused, "内网目标拒绝: "+target))
+		}
+		_ = st.Close()
+	}
+	local, err := net.DialTimeout("tcp", target, 8*time.Second)
+	if err != nil {
+		log.Printf("[client] 内网目标 %s 连接失败: %v", target, err)
+		fail()
+		return
+	}
+	go stream.Pump(local, st)
+}
+
+// openAddr 客户端本地 SOCKS5（-socks5）的拨号回调：经隧道由服务端出网。
 func (cl *Client) openAddr(target string) (io.ReadWriteCloser, error) {
 	cl.mu.Lock()
 	sess := cl.cur

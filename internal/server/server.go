@@ -8,6 +8,9 @@ package server
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
+	"fmt"
+	"io"
 	"log"
 	"net"
 	"strconv"
@@ -18,17 +21,19 @@ import (
 	"ghostpipe/internal/auth"
 	"ghostpipe/internal/mux"
 	"ghostpipe/internal/protocol"
+	"ghostpipe/internal/socks5"
 	"ghostpipe/internal/stream"
 	"ghostpipe/internal/transport"
 )
 
 // Config 服务端配置
 type Config struct {
-	Listen string // 控制监听地址（映射端口绑定同主机的 host 部分）
-	PSK    []byte
-	UseTLS bool
-	WS     bool // M3 WebSocket 载体
-	Mode   string
+	Listen     string // 控制监听地址（映射端口绑定同主机的 host 部分）
+	PSK        []byte
+	UseTLS     bool
+	WS         bool   // M3 WebSocket 载体
+	Mode       string
+	Socks5Addr string // 服务端 SOCKS5 入口（可选，mux 模式；动态目标由客户端内网拨号）
 }
 
 // pendingBind M1：已下发 token、等待数据连接绑定的外部连接
@@ -46,6 +51,8 @@ type Server struct {
 	pendings map[[32]byte]*pendingBind // token → pending（≤64，resource-limit）
 	portMu   sync.Mutex
 	ports    map[uint16]*session // 全局端口归属：支持跨会话原子替换（设计文档 §6）
+	curMu    sync.Mutex
+	cur      *session // 当前活跃会话（v1 单客户端；服务端 SOCKS5 入口经此下发 OPEN_ADDR）
 }
 
 // Run 启动服务端（阻塞）
@@ -55,6 +62,19 @@ func Run(cfg Config) error {
 		return err
 	}
 	s := &Server{cfg: cfg, pendings: make(map[[32]byte]*pendingBind), ports: make(map[uint16]*session)}
+	if cfg.Socks5Addr != "" {
+		if cfg.Mode != "mux" {
+			_ = ln.Close()
+			return errors.New("服务端 SOCKS5 需要 mux 模式（动态目标经 OPEN_ADDR 由客户端内网拨号）")
+		}
+		ln5, err := net.Listen("tcp", cfg.Socks5Addr)
+		if err != nil {
+			_ = ln.Close()
+			return fmt.Errorf("SOCKS5 监听失败: %w", err)
+		}
+		log.Printf("[server] SOCKS5 已监听 %s（动态目标由客户端内网出网）", cfg.Socks5Addr)
+		go func() { _ = socks5.Serve(ln5, s.socksDial) }()
+	}
 	log.Printf("[server] 控制端口已监听 %s（模式=%s TLS=%v WS=%v）", cfg.Listen, cfg.Mode, cfg.UseTLS, cfg.WS)
 	if cfg.UseTLS {
 		log.Printf("[server] 自签证书 SPKI 指纹（客户端 --tls-fingerprint 填这个）: %s", ln.Fingerprint)
@@ -66,6 +86,27 @@ func Run(cfg Config) error {
 		}
 		go s.handleConn(nc)
 	}
+}
+
+// socksDial 服务端 SOCKS5 入口的拨号回调：把动态目标经 OPEN_ADDR(S→C) 下发给客户端内网拨号。
+func (s *Server) socksDial(target string) (io.ReadWriteCloser, error) {
+	s.curMu.Lock()
+	sess := s.cur
+	s.curMu.Unlock()
+	if sess == nil || sess.mux == nil {
+		return nil, errors.New("无客户端在线")
+	}
+	return sess.mux.OpenAddr(target)
+}
+
+func (s *Server) setCur(sess *session) { s.curMu.Lock(); s.cur = sess; s.curMu.Unlock() }
+
+func (s *Server) clearCur(sess *session) {
+	s.curMu.Lock()
+	if s.cur == sess {
+		s.cur = nil
+	}
+	s.curMu.Unlock()
 }
 
 // handleConn 连接分诊（服务端先说话，设计文档 §4.1）：
@@ -102,6 +143,7 @@ func (s *Server) handleConn(nc net.Conn) {
 			conn:    c,
 			tunnels: make(map[uint16]*tunnel),
 		}
+		s.setCur(sess)
 		sess.serve()
 	case protocol.TypeDATABIND:
 		if s.cfg.Mode != "conn" {
@@ -393,6 +435,7 @@ func (sess *session) onOpenAddr(st *mux.Stream, target string) {
 }
 
 func (sess *session) teardown() {
+	sess.srv.clearCur(sess)
 	sess.tmu.Lock()
 	ts := sess.tunnels
 	sess.tunnels = make(map[uint16]*tunnel)

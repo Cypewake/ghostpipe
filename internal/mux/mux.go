@@ -384,7 +384,11 @@ func (m *Mux) OpenTunnel(port uint16) (*Stream, error) {
 	return st, nil
 }
 
-// OpenAddr 客户端 → 服务端：按动态地址开流（M4 SOCKS5）
+// OpenAddr 动态目标开流（双向，M4）：
+//   - 客户端发起 → 客户端本地 SOCKS5 入口，由服务端出网；
+//   - 服务端发起 → 服务端 SOCKS5 入口，由客户端内网拨号（frp socks5 插件等价方向）。
+//
+// 接收方经 onOpenAddr 回调拨号；StreamID 由发起方按自身奇偶分配。
 func (m *Mux) OpenAddr(target string) (*Stream, error) {
 	if target == "" || len(target) > 255 {
 		return nil, errors.New("目标地址非法")
