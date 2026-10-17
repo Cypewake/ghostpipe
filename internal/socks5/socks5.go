@@ -13,7 +13,7 @@ import (
 	"io"
 	"net"
 
-	"ghostpipe/internal/stream"
+	"github.com/Cypewake/ghostpipe/internal/stream"
 )
 
 // Serve 在 ln 上提供 SOCKS5 服务。dial 由上层注入（mux.OpenAddr）。

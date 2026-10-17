@@ -20,12 +20,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"ghostpipe/internal/auth"
-	"ghostpipe/internal/mux"
-	"ghostpipe/internal/protocol"
-	"ghostpipe/internal/socks5"
-	"ghostpipe/internal/stream"
-	"ghostpipe/internal/transport"
+	"github.com/Cypewake/ghostpipe/internal/auth"
+	"github.com/Cypewake/ghostpipe/internal/mux"
+	"github.com/Cypewake/ghostpipe/internal/protocol"
+	"github.com/Cypewake/ghostpipe/internal/socks5"
+	"github.com/Cypewake/ghostpipe/internal/stream"
+	"github.com/Cypewake/ghostpipe/internal/transport"
 )
 
 // TunnelSpec 一条隧道：VPS 远端端口 → 本地目标

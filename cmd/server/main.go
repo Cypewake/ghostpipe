@@ -17,7 +17,7 @@ import (
 	"log"
 	"os"
 
-	"ghostpipe/internal/server"
+	"github.com/Cypewake/ghostpipe/internal/server"
 )
 
 func main() {

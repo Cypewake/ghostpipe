@@ -23,8 +23,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"ghostpipe/internal/protocol"
-	"ghostpipe/internal/transport"
+	"github.com/Cypewake/ghostpipe/internal/protocol"
+	"github.com/Cypewake/ghostpipe/internal/transport"
 )
 
 // 流控常量（设计文档 §5.3）

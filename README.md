@@ -6,7 +6,13 @@
 
 **自研二进制协议的轻量内网隧道工具**
 
-`Go 1.26` · 零第三方依赖 · 单二进制跨平台 · 全链路中文文档
+[![CI](https://github.com/Cypewake/ghostpipe/actions/workflows/ci.yml/badge.svg)](https://github.com/Cypewake/ghostpipe/actions/workflows/ci.yml)
+[![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](https://go.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Cypewake/ghostpipe)](https://github.com/Cypewake/ghostpipe/releases)
+[![Stars](https://img.shields.io/github/stars/Cypewake/ghostpipe?style=social)](https://github.com/Cypewake/ghostpipe/stargazers)
+
+`Go 1.26` · 零第三方依赖 · 单二进制跨平台 · 全链路中文文档 · [**English**](README_EN.md)
 
 </div>
 
@@ -44,11 +50,23 @@ ghostpipe 是一个 frp 同类的内网穿透工具，核心差异：**传输协
 
 ## 2. 快速开始
 
-### 构建与生成密钥
+### 安装
 
 ```bash
-go build -o bin/ ./cmd/...
+# 方式一：go install（需 Go 1.26+）
+go install github.com/Cypewake/ghostpipe/cmd/server@latest
+go install github.com/Cypewake/ghostpipe/cmd/client@latest
 
+# 方式二：Releases 下载预编译二进制（linux / windows / macOS，amd64 / arm64）
+# https://github.com/Cypewake/ghostpipe/releases
+
+# 方式三：源码构建
+go build -o bin/ ./cmd/...
+```
+
+### 生成密钥
+
+```bash
 # 生成 64 位 hex PSK（32 字节）
 openssl rand -hex 32
 ```

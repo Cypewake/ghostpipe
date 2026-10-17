@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"time"
 
-	"ghostpipe/internal/protocol"
-	"ghostpipe/internal/transport"
+	"github.com/Cypewake/ghostpipe/internal/protocol"
+	"github.com/Cypewake/ghostpipe/internal/transport"
 )
 
 // HandshakeTimeout 握手总时限（设计文档 §6，防 slowloris）

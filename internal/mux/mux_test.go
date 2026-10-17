@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"ghostpipe/internal/protocol"
-	"ghostpipe/internal/transport"
+	"github.com/Cypewake/ghostpipe/internal/protocol"
+	"github.com/Cypewake/ghostpipe/internal/transport"
 )
 
 type fixture struct {

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"ghostpipe/internal/protocol"
+	"github.com/Cypewake/ghostpipe/internal/protocol"
 )
 
 func newPipeConns(t *testing.T) (*Conn, *Conn) {

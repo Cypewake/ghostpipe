@@ -18,7 +18,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"ghostpipe/internal/client"
+	"github.com/Cypewake/ghostpipe/internal/client"
 )
 
 func main() {

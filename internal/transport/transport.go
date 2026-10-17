@@ -19,7 +19,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"ghostpipe/internal/protocol"
+	"github.com/Cypewake/ghostpipe/internal/protocol"
 )
 
 // Conn 帧化连接：串行化写入 + 跟踪最近收帧时间（心跳活性判定用，设计文档 §6）。
@@ -151,7 +151,7 @@ func Dial(addr string, o DialOptions) (net.Conn, error) {
 	// 真实校验由 SPKI 指纹比对完成——比盲目跳过校验强）
 	tc := tls.Client(carrier, &tls.Config{
 		InsecureSkipVerify: true, //nolint:gosec // 由 SPKI pinning 替代链式校验
-		NextProtos:         []string{"ghostpipe/1"},
+		NextProtos:         []string{"github.com/Cypewake/ghostpipe/1"},
 	})
 	if err := tc.SetDeadline(time.Now().Add(o.Timeout)); err != nil {
 		carrier.Close()
@@ -228,7 +228,7 @@ func Listen(addr string, o ListenOptions) (*Listener, error) {
 		}
 		tlsConfig = &tls.Config{ //nolint:gosec // 自签场景；最低版本 TLS1.2
 			MinVersion:   tls.VersionTLS12,
-			NextProtos:   []string{"ghostpipe/1"},
+			NextProtos:   []string{"github.com/Cypewake/ghostpipe/1"},
 			Certificates: []tls.Certificate{*cert},
 		}
 		fp = f
