@@ -85,7 +85,7 @@ func TestWSRoundTrip(t *testing.T) {
 	}
 	defer wsc.Close()
 
-	for _, msg := range []string{"hello", "ghostpipe", strings.Repeat("X", 70000)} { // 覆盖 16 位长度编码
+	for _, msg := range []string{"hello", "ghostpipe", strings.Repeat("X", 70000)} { // 7 位与 64 位长度档（16 位档 126~65535 未覆盖）
 		if _, err := wsc.Write([]byte(msg)); err != nil {
 			t.Fatalf("写入失败: %v", err)
 		}
@@ -99,7 +99,7 @@ func TestWSRoundTrip(t *testing.T) {
 	}
 }
 
-// TestWSPingPong 服务端 ping → 客户端自动回 pong，且连接保持可用
+// TestWSPingPong 服务端发 ping 后连接仍可用（客户端不 Read，自动回 pong 未被验证）
 func TestWSPingPong(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, err := upgradeWS(w, r)
@@ -111,7 +111,7 @@ func TestWSPingPong(t *testing.T) {
 			return
 		}
 		_ = wc.writeControl(0x9, []byte("hb")) // 发 ping
-		// 客户端 pong 到达会走 Read 内部 0xA 分支被跳过——这里只验证连接随后可用
+		// 客户端不会回 pong（它从不 Read）——这次 Read 只等 alive 数据帧或超时
 		buf := make([]byte, 5)
 		_ = c.SetReadDeadline(time.Now().Add(3 * time.Second))
 		_, _ = c.Read(buf)

@@ -123,7 +123,7 @@ CONC_OK=0
 for i in 1 2 3 4 5 6 7 8 9 10; do
   $CURL --max-time 8 "http://127.0.0.1:19122/" | grep -q "ghostpipe-e2e-ok" && CONC_OK=$((CONC_OK+1))
 done
-check "S1 并发 10 连接全部成功" "^10$" "$CONC_OK"
+check "S1 连续 10 次请求全部成功（串行）" "^10$" "$CONC_OK"
 kill_pids; sleep 1
 
 # ---------- S2 M1 独立数据连接（conn，两端都要 -mode conn） ----------
