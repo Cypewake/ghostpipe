@@ -1,4 +1,7 @@
 *.exe
 /bin/
 /reports/
+/target/
 *.log
+*.zip
+*.tar.gz
