@@ -43,7 +43,7 @@ const (
 	TypeUNREGISTER FrameType = 0x12
 	TypeOPEN       FrameType = 0x20 // S→C：M1 携带 port+token；M2 携带 port（StreamID=新流）
 	TypeOPENOK     FrameType = 0x21 // 保留（v1 实现未用，前向兼容）
-	TypeOPENADDR   FrameType = 0x22 // S→C：动态目标开流（SOCKS5，Payload=target 字符串）
+	TypeOPENADDR   FrameType = 0x22 // 双向：SOCKS5 动态目标开流，接收方拨号（Payload=target 字符串）
 	TypeDATA       FrameType = 0x30
 	TypeCREDIT     FrameType = 0x31 // StreamID=0 表示连接级
 	TypeCLOSE      FrameType = 0x40

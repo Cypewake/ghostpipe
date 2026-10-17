@@ -45,7 +45,7 @@ func TestGenerateSelfSignedFingerprint(t *testing.T) {
 	if len(cert.Certificate) == 0 || len(fp) != 64 {
 		t.Fatalf("指纹长度异常: %d", len(fp))
 	}
-	// 同一证书两次计算指纹必须一致（稳定性）
+	// 不同证书的指纹必须不同（随机性——CSPRNG 失效时此处先炸）
 	cert2, fp2, err := GenerateSelfSigned()
 	if err != nil {
 		t.Fatal(err)

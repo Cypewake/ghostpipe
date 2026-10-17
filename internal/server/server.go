@@ -256,7 +256,7 @@ func (sess *session) readLoop() {
 	}
 }
 
-// heartbeatLoop 心跳：5s 一跳，15s 无任何入帧即断开（最坏感知 ~30s，设计文档 §6）
+// heartbeatLoop 心跳：5s 一跳，15s 无任何入帧即断开（最坏感知 15~20s + 处理，设计文档 §6）
 func (sess *session) heartbeatLoop() {
 	t := time.NewTicker(5 * time.Second)
 	defer t.Stop()

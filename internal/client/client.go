@@ -232,7 +232,7 @@ func (cl *Client) runOnce() error {
 	}
 	cl.established.Store(true)
 
-	// 心跳保活：5s 一跳，15s 无入帧判死（最坏感知 ~30s）
+	// 心跳保活：5s 一跳，15s 无入帧判死（最坏感知 15~20s + 处理）
 	t := time.NewTicker(5 * time.Second)
 	defer t.Stop()
 	for {
